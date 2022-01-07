@@ -85,6 +85,7 @@ io.on('connection', function (socket: any) {
     }
   });
 
+  // Compile and upload
   socket.on('disconnectSerial', () => {
     try {
       const result = Arduino.getInstance().disconnect();
