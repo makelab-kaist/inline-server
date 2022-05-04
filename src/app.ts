@@ -1,122 +1,121 @@
-import express from 'express';
-import { SimpleSerial } from './serial';
-import { Arduino } from './arduino';
-import { ArduinoCli } from './arduino-cli';
+import fs from 'fs';
+import { Server, Socket } from 'socket.io';
+import { SimpleSerial, SerialOptions } from './serial';
+import { ArduinoBoard, ArduinoCli, ArduinoPlatform } from './arduino-cli';
+import { ArduinoAck } from './arduino-ack';
+import 'console-info';
 
-var path = require('path');
+// Helpers
 
-let serial: SimpleSerial;
+const io = new Server(3000, { cors: { origin: '*' } });
 
-// Server
-const port = process.env.PORT || 3000;
+/*
+io.on('connection', function (socket) {
+  emitInfo(socket, 'Connected');
 
-const app = express();
-const http = require('http').createServer(app);
-// socket.io
-var io = require('socket.io')(http, {
-  cors: {
-    origin: '*',
-  },
-});
-
-function emitError(msg: string, socket: any) {
-  socket.emit('error', { msg });
-  console.log('ERROR', msg);
-}
-
-function emitInfo(msg: string, socket: any) {
-  socket.emit('info', { msg });
-  console.log('INFO', msg);
-}
-
-// CONNECT
-io.on('connection', function (socket: any) {
-  // Disconnect serial on connection
-  emitInfo('Connected', socket);
-  Arduino.getInstance().reset();
-
-  // Disconnect
+  // On disconnect
   socket.on('disconnect', function () {
     console.log('Disconnected');
   });
 
-  // List available serial ports
+  // List serial ports
   socket.on('listSerials', async function () {
-    const list: string[] = await Arduino.getInstance().listSerialPorts();
-    socket.emit('listSerialsData', list);
-    console.log('listSerialsData', list);
+    const {
+      message,
+      success,
+    }: Ack = await ArduinoCli.getInstance().listAvailablePorts();
+    if (!success) {
+      emitError(socket, message as string);
+    } else {
+      emitResult(socket, 'listSerialsData', { message, success });
+    }
   });
 
   // Initialize serial
   socket.on(
     'beginSerial',
-    async ({
-      port,
-      baud = 115200,
-      autoconnect = true,
-    }: {
-      port: string;
-      baud: number;
-      autoconnect: boolean;
-    }) => {
-      try {
-        const result = await Arduino.getInstance().begin(
-          port,
+    ({ portName, baud = 115200, autoConnect = true }: SerialOptions) => {
+      // connect to serial
+      SimpleSerial.getInstance()
+        .initialize({
+          portName,
           baud,
-          (data: string) => {
-            socket?.emit('serialData', data);
+          onIncomingData: (data: string) => {
+            emitResult(socket, 'serialData', { message: data, success: true });
           },
-          autoconnect
-        );
-        emitInfo(result, socket);
-      } catch (err) {
-        emitError(err as string, socket);
-      }
+          autoConnect,
+        })
+        .then((_) => {
+          ArduinoCli.getInstance().initialize(
+            portName,
+            ArduinoBoard.Arduino_Uno
+          );
+          emitInfo(socket, 'Port initialized');
+        })
+        .catch((err) => emitError(socket, err));
     }
   );
 
-  // Connect serial
-  socket.on('connectSerial', async () => {
-    try {
-      const result = await Arduino.getInstance().connect();
-      emitInfo(result, socket);
-    } catch (errmsg) {
-      emitError(errmsg as string, socket);
-    }
+  // Connect / disconnect serial
+  socket.on('connectSerial', () => {
+    SimpleSerial.getInstance()
+      .connectSerial()
+      .then((res) => emitInfo(socket, res))
+      .catch((err) => emitError(socket, err));
   });
 
-  // Compile and upload
   socket.on('disconnectSerial', () => {
-    try {
-      const result = Arduino.getInstance().disconnect();
-      emitInfo(result, socket);
-    } catch (err) {
-      emitError((err as Error).message, socket);
-    }
+    SimpleSerial.getInstance().disconnectSerial();
+    emitInfo(socket, 'disconnected');
   });
 
+  // Compile and Upload
   socket.on(
-    'compileAndUpload',
-    async ({
-      sketchPath,
-      autoconnect = true,
-    }: {
-      sketchPath: string;
-      autoconnect: boolean;
-    }) => {
-      try {
-        const result = await Arduino.getInstance().compileAndUpload(
-          sketchPath,
-          autoconnect
-        );
-        emitInfo(result, socket);
-      } catch (err) {
-        emitError(err as string, socket);
-      }
+    'compileAndUploadSketch',
+    ({ sketchPath }: { sketchPath: string }) => {
+      ArduinoCli.getInstance()
+        .compileAndUpload(sketchPath)
+        .then((ack: Ack) => {
+          console.log('====>', ack);
+
+          emitInfo(socket, ack.message as string);
+        })
+        .catch((ack: Ack) => emitError(socket, ack.message as string));
     }
   );
 });
+*/
 
-http.listen(port, function () {
-  console.log('Server listening at port %d', port);
-});
+// var path = require('path');
+
+// // CONNECT
+
+// Helpers
+
+type Message = {
+  message: any;
+  success: boolean;
+};
+
+function emitError(socket: Socket, message: string) {
+  const m = {
+    message,
+    success: false,
+  };
+  socket.emit('error', m);
+  console.log('error:', m);
+}
+
+function emitInfo(socket: Socket, message: string) {
+  const m = {
+    message,
+    success: true,
+  };
+  socket.emit('info', m);
+  console.log('info:', m);
+}
+
+function emitResult(socket: Socket, tag: string, message: Message) {
+  socket.emit(tag, message);
+  console.log(tag, ':', message);
+}
