@@ -9,9 +9,10 @@ import 'console-info';
 import 'console-error';
 import 'console-warn';
 
-// Helpers
+const PORT = 3000;
 
-const io = new Server(3000, { cors: { origin: '*' } });
+const io = new Server(PORT, { cors: { origin: '*' } });
+console.info(`listening on port ${PORT}`);
 
 io.on('connection', function (socket) {
   emitInfo(socket, 'Connected');
