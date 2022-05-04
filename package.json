@@ -7,15 +7,14 @@
     "start": "node dist/app.js",
     "dev": "nodemon src/app.ts",
     "build": "tsc -p .",
-    "build_docs": "npx -p @asyncapi/generator ag ./asyncapi.yaml @asyncapi/html-template -o docs"
+    "build_docs": "npx ag --force-write ./asyncapi.yaml @asyncapi/html-template -o docs"
   },
-  "author": "",
+  "author": "Andrea",
   "license": "ISC",
   "devDependencies": {
-    "@asyncapi/cli": "^0.19.1",
-    "@asyncapi/generator": "^1.9.3",
     "@types/node": "^16.11.12",
     "@types/serialport": "^8.0.2",
+    "@types/temp": "^0.9.1",
     "console-error": "^0.0.4",
     "console-info": "^0.0.5",
     "console-warn": "^0.0.4",
@@ -25,7 +24,8 @@
   },
   "dependencies": {
     "serialport": "^9.2.8",
-    "socket.io": "^4.4.0"
+    "socket.io": "^4.4.0",
+    "temp": "^0.9.4"
   },
   "keywords": []
 }

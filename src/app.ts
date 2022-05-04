@@ -1,21 +1,24 @@
 import fs from 'fs';
+import temp from 'temp';
+import path from 'path';
 import { Server, Socket } from 'socket.io';
 import { SimpleSerial, SerialOptions } from './serial';
 import { ArduinoBoard, ArduinoCli, ArduinoPlatform } from './arduino-cli';
 import { ArduinoAck } from './arduino-ack';
 import 'console-info';
+import 'console-error';
+import 'console-warn';
 
 // Helpers
 
 const io = new Server(3000, { cors: { origin: '*' } });
 
-/*
 io.on('connection', function (socket) {
   emitInfo(socket, 'Connected');
 
   // On disconnect
   socket.on('disconnect', function () {
-    console.log('Disconnected');
+    console.warn('Disconnected');
   });
 
   // List serial ports
@@ -23,7 +26,7 @@ io.on('connection', function (socket) {
     const {
       message,
       success,
-    }: Ack = await ArduinoCli.getInstance().listAvailablePorts();
+    }: ArduinoAck = await ArduinoCli.getInstance().listAvailablePorts();
     if (!success) {
       emitError(socket, message as string);
     } else {
@@ -66,7 +69,7 @@ io.on('connection', function (socket) {
 
   socket.on('disconnectSerial', () => {
     SimpleSerial.getInstance().disconnectSerial();
-    emitInfo(socket, 'disconnected');
+    emitInfo(socket, 'Disconnected');
   });
 
   // Compile and Upload
@@ -75,27 +78,31 @@ io.on('connection', function (socket) {
     ({ sketchPath }: { sketchPath: string }) => {
       ArduinoCli.getInstance()
         .compileAndUpload(sketchPath)
-        .then((ack: Ack) => {
-          console.log('====>', ack);
-
-          emitInfo(socket, ack.message as string);
+        .then(({ message }: ArduinoAck) => {
+          emitInfo(socket, message as string);
         })
-        .catch((ack: Ack) => emitError(socket, ack.message as string));
+        .catch(({ message }: ArduinoAck) =>
+          emitError(socket, message as string)
+        );
     }
   );
+
+  // Compile and upload a string of code (it creates a temporary sketch)
+  socket.on('compileAndUploadCode', ({ code }: { code: string }) => {
+    createTempSketch(code).then((sketchPath) => {
+      ArduinoCli.getInstance()
+        .compileAndUpload(sketchPath)
+        .then(({ message }: ArduinoAck) => {
+          emitInfo(socket, message as string);
+        })
+        .catch(({ message }: ArduinoAck) =>
+          emitError(socket, message as string)
+        );
+    });
+  });
 });
-*/
-
-// var path = require('path');
-
-// // CONNECT
 
 // Helpers
-
-type Message = {
-  message: any;
-  success: boolean;
-};
 
 function emitError(socket: Socket, message: string) {
   const m = {
@@ -103,7 +110,7 @@ function emitError(socket: Socket, message: string) {
     success: false,
   };
   socket.emit('error', m);
-  console.log('error:', m);
+  console.error('error:', m);
 }
 
 function emitInfo(socket: Socket, message: string) {
@@ -112,10 +119,23 @@ function emitInfo(socket: Socket, message: string) {
     success: true,
   };
   socket.emit('info', m);
-  console.log('info:', m);
+  console.info('info:', m);
 }
 
-function emitResult(socket: Socket, tag: string, message: Message) {
+function emitResult(socket: Socket, tag: string, message: ArduinoAck) {
   socket.emit(tag, message);
   console.log(tag, ':', message);
+}
+
+function createTempSketch(code: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    temp.mkdir('sketch', function (err, dirPath) {
+      const sketchName = path.basename(dirPath);
+      const inputPath = path.join(dirPath, sketchName + '.ino');
+      fs.writeFile(inputPath, code, function (err) {
+        if (err) return reject(err.message);
+        return resolve(dirPath);
+      });
+    });
+  });
 }
