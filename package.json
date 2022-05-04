@@ -1,28 +1,29 @@
 {
   "name": "serial-server",
   "version": "1.0.0",
-  "description": "Client side",
+  "description": "Server",
   "main": "index.js",
   "scripts": {
     "start": "node dist/app.js",
     "dev": "nodemon src/app.ts",
     "build": "tsc -p .",
-    "build_docs": "npx ag --force-write asyncapi.yaml @asyncapi/html-template -o docs"
+    "build_docs": "npx ag --force-write asyncapi.yaml https://bit.ly/asyncapi @asyncapi/html-template -o docs"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@asyncapi/cli": "^0.12.1",
-    "@asyncapi/generator": "^1.8.27",
-    "@types/express": "^4.17.13",
+    "@asyncapi/cli": "^0.19.1",
+    "@asyncapi/generator": "^1.9.3",
     "@types/node": "^16.11.12",
     "@types/serialport": "^8.0.2",
+    "console-error": "^0.0.4",
+    "console-info": "^0.0.5",
+    "console-warn": "^0.0.4",
     "nodemon": "^2.0.15",
     "ts-node": "^10.4.0",
     "typescript": "^4.5.2"
   },
   "dependencies": {
-    "express": "^4.17.1",
     "serialport": "^9.2.8",
     "socket.io": "^4.4.0"
   },

@@ -1,11 +1,13 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import { promisify } from 'util';
 import fs from 'fs';
+import path from 'path';
+import { ArduinoAck } from './arduino-ack';
 const exec = promisify(require('child_process').exec);
 
 // Default platforms
 enum ArduinoPlatform {
   avr = 'arduino:avr',
+  /* Feel free to add more */
 }
 
 // Default baords
@@ -39,158 +41,153 @@ enum ArduinoBoard {
   Linino_One = 'arduino:avr:one',
 }
 
+type RawAck = {
+  message: string;
+  success: boolean;
+};
+
 class ArduinoCli {
-  private static instance: ArduinoCli;
-  private portName: string = '';
-  private fqbn: ArduinoBoard = ArduinoBoard.Arduino_Uno;
+  private static _instance: ArduinoCli;
+  private _portName: string = '';
+  private _fqbn: ArduinoBoard = ArduinoBoard.Arduino_Uno;
 
   private constructor() {}
 
   static getInstance() {
-    if (!ArduinoCli.instance) this.instance = new ArduinoCli();
-    return this.instance;
+    if (!ArduinoCli._instance) this._instance = new ArduinoCli();
+    return this._instance;
   }
 
-  /**
-   * Return the current board platform
-   * @returns {string} with the platfrom name
-   */
   get platform(): string {
-    return this.fqbn.toString();
+    return this._fqbn.toString();
   }
 
-  /**
-   * Initialize the Arduino CLI
-   * @param port to connect to
-   * @param board to use
-   */
   initialize(port: string, board: ArduinoBoard) {
-    this.portName = port;
-    this.fqbn = board;
-  }
-  /**
-   * Get version of Arduino CLI
-   * @returns {Promise<string>} containing the stdout
-   */
-  version(): Promise<string> {
-    return this.run(`version`, __dirname);
+    this._portName = port;
+    this._fqbn = board;
   }
 
-  /**
-   * Check whether the Arduino CLI is installed
-   * @returns {Promise<boolean>} true or false whether it is installed or not
-   */
-  async isInstalled(): Promise<boolean> {
-    try {
-      await this.run('', __dirname);
-      return true;
-    } catch (err) {
-      return false; // if it fails, it is not installed
-    }
+  version(): Promise<ArduinoAck> {
+    return this.run(`version`, __dirname)
+      .then((cli: any) => {
+        return {
+          success: true,
+          message: cli.VersionString,
+        };
+      })
+      .catch((e) => {
+        return {
+          success: false,
+          message: 'arduino-cli not installed',
+        };
+      });
   }
 
-  /**
-   * Install the platform via `arduino-cli core install`
-   * @param board - the board used to infer which platform to isntall
-   * @returns {Promise<string>} string containing the stdout
-   */
-  installPlatform(platform: ArduinoPlatform): Promise<string> {
-    return this.run(`core install ${platform}`, __dirname);
+  installPlatform(platform: ArduinoPlatform): Promise<ArduinoAck> {
+    return this.run(`core install ${platform}`, __dirname)
+      .then((cli: any) => {
+        return {
+          success: true,
+          message: `${platform} installed`,
+        };
+      })
+      .catch((e) => {
+        return {
+          success: false,
+          message: `Unable to install ${platform}`,
+        };
+      });
   }
 
-  /**
-   * Install the platform via `arduino-cli core install` for the current baord
-   * @returns {Promise<string>} a string containing the stdout
-   */
-  installCurrentPlatform(): Promise<string> {
-    const platform = this.fqbn
+  installCurrentPlatform(): Promise<ArduinoAck> {
+    const platform = this._fqbn
       .split(':')
       .slice(0, 2)
       .join(':') as ArduinoPlatform; // arduino:avr:uno -> arduino:avr
 
-    // return this.installPlatform(this.fqbn);
     return this.installPlatform(platform);
   }
 
-  /**
-   * Returns available ports
-   * @returns {Promise<string[]>} list of ports
-   */
-  listAvailablePorts(): Promise<string[]> {
+  listAvailablePorts(): Promise<ArduinoAck> {
     return new Promise(async (resolve) => {
-      const res = await this.run(`board list --format json`, __dirname);
-      const resObj = JSON.parse(res);
-      const ports = resObj.map((val: any) => val.port!.address);
-      resolve(ports);
+      const { message } = await this.run(`board list`, __dirname);
+      const payload = JSON.parse(message);
+      const ports = payload.map(({ port }: any) => port.address);
+
+      resolve({
+        success: true,
+        message: ports,
+      });
     });
   }
 
-  /**
-   * Compile and upload
-   * @param sketchPath
-   * @returns {Promise<string>} result of compilation or upload
-   */
-  compileAndUpload(sketchPath: string): Promise<string> {
-    let report = '';
-    return this.compileSketch(sketchPath)
-      .then((msg) => {
-        report += msg;
-        return this.uploadSketch(sketchPath);
-      })
-      .then((msg) => {
-        report += msg;
-        return new Promise((resolve) => resolve(report));
+  async compileAndUpload(sketchPath: string): Promise<ArduinoAck> {
+    const compileRes = await this.compileSketch(sketchPath);
+    if (!compileRes.success) return compileRes;
+    const uploadRes = await this.uploadSketch(sketchPath);
+    if (!uploadRes.success) return uploadRes;
+
+    // Done - return the stats from the compiler
+    return compileRes;
+  }
+
+  compileSketch(sketchPath: string): Promise<ArduinoAck> {
+    return this.canCompile(sketchPath).then((_) => {
+      const res = this.run(`compile -b ${this._fqbn}`, sketchPath);
+      return res.then(({ message }) => {
+        const { compiler_out, compiler_err, success } = JSON.parse(message);
+        if (success)
+          return {
+            message: compiler_out,
+            success,
+          };
+        else
+          return {
+            message: compiler_err,
+            success,
+          };
       });
+    });
+  }
+
+  uploadSketch(sketchPath: string): Promise<ArduinoAck> {
+    return this.canCompile(sketchPath).then((_) => {
+      return this.run(
+        `upload --port ${this._portName} --fqbn ${this._fqbn}`,
+        sketchPath
+      );
+    });
   }
 
   // Private methods
+  private canCompile(sketchPath: string): Promise<ArduinoAck> {
+    return new Promise((resolve, reject) => {
+      const sketchName = path.basename(sketchPath) + '.ino';
 
-  /**
-   * Compile the sketch
-   * @param sketchPath
-   * @returns {Promise<string>} of output for compilation
-   */
-  private compileSketch(sketchPath: string): Promise<string> {
-    if (!fs.existsSync(sketchPath))
-      return new Promise((_, reject) =>
-        reject(`Sketch folder ${sketchPath} is invalid`)
-      );
+      if (
+        !fs.existsSync(sketchPath) ||
+        !fs.existsSync(path.join(sketchPath, sketchName)) // name.ino
+      )
+        return reject({
+          success: false,
+          message: `Sketch folder "${sketchPath}" is invalid or "${sketchName}" does not exist`,
+        });
 
-    if (!this.isReady())
-      return new Promise((_, reject) => reject(`Board not initialized`));
+      if (!this.isReady())
+        return reject({
+          success: false,
+          message: `Board not initialized`,
+        });
 
-    return this.run(`compile -b ${this.fqbn}`, sketchPath);
+      resolve({ success: true, message: 'Can compile' });
+    });
   }
 
-  /**
-   * Upload the sketch
-   * @param sketchPath
-   * @returns {Promise<string>} of output for upload
-   */
-  private uploadSketch(sketchPath: string): Promise<string> {
-    if (!fs.existsSync(sketchPath))
-      return new Promise((_, reject) =>
-        reject(`Sketch folder ${sketchPath} is invalid`)
-      );
-
-    if (!this.isReady())
-      return new Promise((_, reject) => reject(`Board not initialized`));
-
-    return this.run(
-      `upload --port ${this.portName} --fqbn ${this.fqbn} -v`,
-      sketchPath
-    );
-  }
-
-  /**
-   * Check whether baord is initialized
-   * @returns {boolean}
-   */
   private isReady(): boolean {
     return (
-      this.portName !== undefined &&
-      this.portName !== '' &&
-      this.fqbn !== undefined
+      this._portName !== undefined &&
+      this._portName !== '' &&
+      this._fqbn !== undefined
     );
   }
 
@@ -198,21 +195,27 @@ class ArduinoCli {
    *
    * @param command - the command to execute appended to `arduino-cli`
    * @param baseDirectoryPath - the location of the sketch (default none)
-   * @returns a string containing the stdout
+   * @returns Promise<any>
    */
-  private run(
-    command: string,
-    baseDirectoryPath: string
-  ): Promise<string> | never {
-    return new Promise(async (resolve, reject) => {
-      const workingDir = { cwd: baseDirectoryPath };
-      try {
-        const { stdout, stderr }: { stdout: string; stderr: string } =
-          await exec(`arduino-cli ${command}`, workingDir);
-        resolve(stdout + stderr);
-      } catch (err) {
-        reject(`Error: ${err}`);
-      }
+  // This is used to interact with the output from ArduinoCLI
+  private run(command: string, baseDirectoryPath: string): Promise<RawAck> {
+    const workingDir = { cwd: baseDirectoryPath };
+    return new Promise((resolve, reject) => {
+      return exec(`arduino-cli ${command} --format json`, workingDir)
+        .then(({ stdout }: any) => {
+          const res = {
+            message: stdout == '' ? 'OK' : stdout,
+            success: true,
+          };
+          resolve(res);
+        })
+        .catch(({ stdout, stderr }: any) => {
+          const res = {
+            message: stdout == '' ? stderr : stdout,
+            success: false,
+          };
+          resolve(res);
+        });
     });
   }
 }

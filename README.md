@@ -2,41 +2,43 @@
 
 A simple server that allows to compile and upload sketches on Arduino via socket.io, as well as to listen to serial output.
 
-## Overview
-
-Please refer to the docs folder about the available operations. These include:
-
-**PUB**
-
-- listSerials
-- beginSerial
-- connectSerial
-- disconnectSerial
-- compileAndUpload
-
-**SUB**
-
-- listSerialsData
-- serialData
-- info
-- error
-
-![](images/postman.png)
-
-## Client side example
+## Arduino-cli Example
 
 ```js
-import io from 'socket.io-client';
-const socket = io('http://localhost:3000', {
-  reconnection: true,
+ArduinoCli.getInstance()
+  .listAvailablePorts()
+  .then((a) => console.log(a));
+
+ArduinoCli.getInstance().initialize(
+  '/dev/cu.usbmodem544401',
+  ArduinoBoard.Arduino_Uno
+);
+
+ArduinoCli.getInstance()
+  .compileAndUpload('/Users/andrea/Desktop/aaa')
+  .then((e) => console.log(e))
+  .catch((e) => console.log(e));
+```
+
+## Simple serial
+
+```js
+SimpleSerial.getInstance().initialize({
+  portName: '/dev/cu.usbmodem544401',
+  baud: 115200,
+  autoConnect: true,
+  onIncomingData: function (data: string) {
+    console.log(data);
+  },
 });
 
-socket.on('connect', function () {
-  console.log('Connected!');
-  socket.emit('listSerials');
-});
+// To connect manually
+SimpleSerial.getInstance()
+  .connectSerial()
+  .then((m) => console.log(m))
+  .catch((e) => console.log(e));
 
-socket.on('listSerialsData', function (ports: string[]) {
-  console.log(ports);
-});
+setTimeout(() => {
+  SimpleSerial.getInstance().disconnectSerial();
+}, 10000);
 ```

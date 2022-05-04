@@ -1,50 +1,80 @@
 import SerialPort, { parsers } from 'serialport';
 
-class SimpleSerial {
-  private serialPort?: SerialPort;
-  private parser?: SerialPort.parsers.Readline;
+type SerialOptions = {
+  portName: string;
+  baud: number;
+  onIncomingData?: (s: string) => void;
+  delayAtStart?: number;
+  autoConnect?: boolean;
+};
 
-  constructor(
-    private portName: string,
-    private baud: number = 115200,
-    private onIncomingData: (s: string) => void,
-    private delayAtStart: number = 50
-  ) {}
+class SimpleSerial {
+  private static _instance: SimpleSerial;
+  private _serialPort?: SerialPort;
+  private _parser?: SerialPort.parsers.Readline;
+
+  // options with defaults
+  private _options: SerialOptions = {
+    portName: '',
+    baud: 115200,
+    onIncomingData: (s: string) => {},
+    delayAtStart: 50,
+    autoConnect: false,
+  };
+
+  private constructor() {}
+
+  static getInstance() {
+    if (!SimpleSerial._instance) this._instance = new SimpleSerial();
+    return this._instance;
+  }
+
+  initialize(options: SerialOptions): Promise<string> {
+    if (options.portName === '') throw new Error('Not a valid port');
+    this._options = { ...this._options, ...options };
+
+    // autoconnect at initialize
+    if (this._options.autoConnect) return this.connectSerial();
+    return Promise.resolve('Initialized');
+  }
 
   connectSerial(): Promise<string> {
     return new Promise((resolve, reject) => {
       // Already connected?
       if (this.isSerialConnected()) {
         reject('Serial port already open');
+        return;
       }
 
       try {
-        this.serialPort = new SerialPort(
-          this.portName,
+        this._serialPort = new SerialPort(
+          this._options.portName,
           {
-            baudRate: this.baud,
+            baudRate: this._options.baud,
           },
           function (err) {
             if (err) {
               reject(err.message);
+              return;
             }
           }
         );
 
         // After opening, register the callback
-        this.serialPort.on('open', () => {
+        this._serialPort.on('open', () => {
           setTimeout(() => {
-            this.parser = this.serialPort!.pipe(
+            this._parser = this._serialPort!.pipe(
               new parsers.Readline({ delimiter: '\r\n' })
             );
             // Switches the port into "flowing mode"
-            this.parser.on('data', (data) => {
-              this.onIncomingData(data);
+            this._parser.on('data', (data) => {
+              this._options.onIncomingData!(data);
             });
 
             // Resolve
-            resolve(`Connected to ${this.portName}`);
-          }, this.delayAtStart); // let's give it some time to wake up
+            resolve(`Connected to ${this._options.portName}`);
+            return;
+          }, this._options.delayAtStart); // let's give it some time to wake up
         });
       } catch (err) {
         reject((err as Error).message);
@@ -57,18 +87,18 @@ class SimpleSerial {
       return;
     }
     // stop listenting
-    this.parser?.removeAllListeners();
+    this._parser?.removeAllListeners();
     // close
-    this.serialPort?.close();
+    this._serialPort?.close();
   }
 
   isSerialConnected(): boolean {
-    return this.serialPort?.isOpen || false;
+    return this._serialPort?.isOpen || false;
   }
 
   send(commandString: string): void {
-    this.serialPort?.write(`${commandString}\n\r`);
+    this._serialPort?.write(`${commandString}\n\r`);
   }
 }
 
-export { SimpleSerial };
+export { SimpleSerial, SerialOptions };
