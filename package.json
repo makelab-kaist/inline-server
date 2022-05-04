@@ -7,7 +7,7 @@
     "start": "node dist/app.js",
     "dev": "nodemon src/app.ts",
     "build": "tsc -p .",
-    "build_docs": "npx ag --force-write asyncapi.yaml https://bit.ly/asyncapi @asyncapi/html-template -o docs"
+    "build_docs": "npx -p @asyncapi/generator ag ./asyncapi.yaml @asyncapi/html-template -o docs"
   },
   "author": "",
   "license": "ISC",
