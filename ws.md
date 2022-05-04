@@ -84,7 +84,7 @@ Example errors
 
 ## 5. Receiving data
 
-Server:
+Server: `serialData`
 
 ```json
 {
