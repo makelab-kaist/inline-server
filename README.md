@@ -42,3 +42,7 @@ setTimeout(() => {
   SimpleSerial.getInstance().disconnectSerial();
 }, 10000);
 ```
+
+## Websockets
+
+To see the ws protocol, refer to [this](./ws.md).
