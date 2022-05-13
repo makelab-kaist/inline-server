@@ -15,19 +15,18 @@ const io = new Server(PORT, { cors: { origin: '*' } });
 console.info(`listening on port ${PORT}`);
 
 io.on('connection', function (socket) {
-  emitInfo(socket, 'Connected');
+  emitInfo(socket, 'Client connected to server');
 
   // On disconnect
   socket.on('disconnect', function () {
+    SimpleSerial.getInstance().disconnectSerial();
     console.warn('Disconnected');
   });
 
   // List serial ports
   socket.on('listSerials', async function () {
-    const {
-      message,
-      success,
-    }: ArduinoAck = await ArduinoCli.getInstance().listAvailablePorts();
+    const { message, success }: ArduinoAck =
+      await ArduinoCli.getInstance().listAvailablePorts();
     if (!success) {
       emitError(socket, message as string);
     } else {
@@ -94,7 +93,7 @@ io.on('connection', function (socket) {
       ArduinoCli.getInstance()
         .compileAndUpload(sketchPath)
         .then(({ message }: ArduinoAck) => {
-          emitInfo(socket, message as string);
+          emitInfo(socket, [message as string, sketchPath]);
         })
         .catch(({ message }: ArduinoAck) =>
           emitError(socket, message as string)
@@ -105,7 +104,7 @@ io.on('connection', function (socket) {
 
 // Helpers
 
-function emitError(socket: Socket, message: string) {
+function emitError(socket: Socket, message: unknown) {
   const m = {
     message,
     success: false,
@@ -114,10 +113,11 @@ function emitError(socket: Socket, message: string) {
   console.error('error:', m);
 }
 
-function emitInfo(socket: Socket, message: string) {
+function emitInfo(socket: Socket, message: unknown, others: {} = {}) {
   const m = {
     message,
     success: true,
+    ...others,
   };
   socket.emit('info', m);
   console.info('info:', m);

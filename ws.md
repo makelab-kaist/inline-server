@@ -134,7 +134,7 @@ Server:
 
 ```json
 {
-  "message": "Sketch uses 1960 bytes (6%) of program storage space. Maximum is 32256 bytes.\nGlobal variables use 194 bytes (9%) of dynamic memory, leaving 1854 bytes for local variables. Maximum is 2048 bytes.\n",
+  "message": ["Sketch uses 1960 bytes (6%) of program storage space. Maximum is 32256 bytes.\nGlobal variables use 194 bytes (9%) of dynamic memory, leaving 1854 bytes for local variables. Maximum is 2048 bytes.\n","/path/to/sketch"]
   "success": true
 }
 ```

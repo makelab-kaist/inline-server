@@ -123,9 +123,9 @@ class ArduinoCli {
 
   async compileAndUpload(sketchPath: string): Promise<ArduinoAck> {
     const compileRes = await this.compileSketch(sketchPath);
-    if (!compileRes.success) return compileRes;
+    if (!compileRes.success) throw compileRes;
     const uploadRes = await this.uploadSketch(sketchPath);
-    if (!uploadRes.success) return uploadRes;
+    if (!uploadRes.success) throw uploadRes;
 
     // Done - return the stats from the compiler
     return compileRes;
