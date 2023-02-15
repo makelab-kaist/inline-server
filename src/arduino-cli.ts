@@ -62,6 +62,12 @@ class ArduinoCli {
     return this._fqbn.toString();
   }
 
+  set board(b: string) {
+    const bd = (ArduinoBoard as any)[b];
+    if (!bd) throw new Error('Selected board does not exist');
+    this._fqbn = bd;
+  }
+
   initialize(port: string, board: ArduinoBoard) {
     this._portName = port;
     this._fqbn = board;
@@ -117,6 +123,15 @@ class ArduinoCli {
       resolve({
         success: true,
         message: ports,
+      });
+    });
+  }
+
+  listAvailableBoards(): Promise<ArduinoAck> {
+    return new Promise(async (resolve) => {
+      resolve({
+        success: true,
+        message: Object.keys(ArduinoBoard),
       });
     });
   }

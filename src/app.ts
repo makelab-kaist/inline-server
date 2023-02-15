@@ -10,6 +10,7 @@ import 'console-error';
 import 'console-warn';
 
 const PORT = 3000;
+let defaultBoard = ArduinoBoard.Arduino_Uno;
 
 const io = new Server(PORT, { cors: { origin: '*' } });
 console.info(`listening on port ${PORT}`);
@@ -34,6 +35,17 @@ io.on('connection', function (socket) {
     }
   });
 
+  // List boards
+  socket.on('listBoards', async function () {
+    const { message, success }: ArduinoAck =
+      await ArduinoCli.getInstance().listAvailableBoards();
+    if (!success) {
+      emitError(socket, message as string);
+    } else {
+      emitResult(socket, 'listBoardsData', { message, success });
+    }
+  });
+
   // Initialize serial
   socket.on(
     'beginSerial',
@@ -49,15 +61,23 @@ io.on('connection', function (socket) {
           autoConnect,
         })
         .then((_) => {
-          ArduinoCli.getInstance().initialize(
-            portName,
-            ArduinoBoard.Arduino_Uno
-          );
+          ArduinoCli.getInstance().initialize(portName, defaultBoard);
           emitInfo(socket, 'Port initialized');
         })
         .catch((err) => emitError(socket, err));
     }
   );
+
+  // Pick a board
+  socket.on('selectBoard', ({ board }) => {
+    let temp = (ArduinoBoard as any)[board];
+    if (temp) {
+      defaultBoard = temp;
+      emitInfo(socket, 'Board selected');
+    } else {
+      emitError(socket, 'Not a valid board');
+    }
+  });
 
   // Connect / disconnect serial
   socket.on('connectSerial', () => {
