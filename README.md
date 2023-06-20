@@ -1,15 +1,15 @@
 # Arduino Server
 
-A simple server that allows to compile and upload sketches on Arduino via socket.io, as well as to listen to serial output.
+A simple server that allows to compile and upload code sketches on Arduino via socket.io, as well as listening to serial output.
 
 ## Installation
 
 - Clone the repository on your local drive and do `cd arduino-server`
 - Install dependencies with `npm install`
-- Run `brew install arduino-cli`. For that you need [homebrew](https://brew.sh) installed. For other systems, see the [arduino-cli docs](https://arduino.github.io/arduino-cli/0.33).
-- Run `arduino-cli core update-index` and list your boards with `arduino-cli board list`.
-- Install some boards. For example, to install the Arduino UNO use `arduino-cli core install arduino:avr`.
-- Run the server with `npm run dev` (development) or `npm start` (release).
+- Run `brew install arduino-cli`. For that, you need [homebrew](https://brew.sh) installed. For other systems, see the [arduino-cli docs](https://arduino.github.io/arduino-cli/0.33)
+- Run `arduino-cli core update-index` and list your boards with `arduino-cli board list`
+- Install some boards. For example, to install the Arduino UNO use `arduino-cli core install arduino:avr`
+- Run the server with `npm run dev` (development) or `npm start` (release)
 
 ## Websockets
 
