@@ -11,6 +11,10 @@ A simple server that allows to compile and upload sketches on Arduino via socket
 - Install some boards. For example, to install the Arduino UNO use `arduino-cli core install arduino:avr`.
 - Run the server with `npm run dev` (development) or `npm start` (release).
 
+## Websockets
+
+The Arduino Server uses socket.io for communication. To see the ws protocol, refer to [this](./ws.md).
+
 ## Writing code to interface with the server
 
 These are examples of code snippets that can be used to interface with the server.
@@ -35,6 +39,8 @@ ArduinoCli.getInstance()
 
 ### Simple serial
 
+Examples of how to use the SimpleSerial (used by the server).
+
 ```js
 SimpleSerial.getInstance().initialize({
   portName: '/dev/cu.usbmodem544401',
@@ -55,7 +61,3 @@ setTimeout(() => {
   SimpleSerial.getInstance().disconnectSerial();
 }, 10000);
 ```
-
-### Websockets
-
-To see the ws protocol, refer to [this](./ws.md).
