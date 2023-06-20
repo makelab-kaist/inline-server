@@ -9,7 +9,7 @@ A simple server that allows to compile and upload sketches on Arduino via socket
 - Run `brew install arduino-cli`. For that you need [homebrew](https://brew.sh) installed. For other systems, see the [arduino-cli docs](https://arduino.github.io/arduino-cli/0.33).
 - Run `arduino-cli core update-index` and list your boards with `arduino-cli board list`.
 - Install some boards. For example, to install the Arduino UNO use `arduino-cli core install arduino:avr`.
-- Run the server with `npm run dev`.
+- Run the server with `npm run dev` (development) or `npm start` (release).
 
 ## Writing code to interface with the server
 
