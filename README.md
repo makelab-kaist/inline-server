@@ -13,7 +13,7 @@ A simple server that allows to compile and upload code sketches on Arduino via s
 
 ## Websockets
 
-The Arduino Server uses socket.io for communication. To see the ws protocol, refer to [this](./ws.md).
+The Arduino Server uses socket.io for communication. To see the ws protocol, refer to [this](./ws_protocol.md).
 
 ## Writing code to interface with the server
 
