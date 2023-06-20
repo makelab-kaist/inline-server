@@ -2,7 +2,20 @@
 
 A simple server that allows to compile and upload sketches on Arduino via socket.io, as well as to listen to serial output.
 
-## Arduino-cli Example
+## Installation
+
+- Clone the repository on your local drive and do `cd arduino-server`
+- Install dependencies with `npm install`
+- Run `brew install arduino-cli`. For that you need [homebrew](https://brew.sh) installed. For other systems, see the [arduino-cli docs](https://arduino.github.io/arduino-cli/0.33).
+- Run `arduino-cli core update-index` and list your boards with `arduino-cli board list`.
+- Install some boards. For example, to install the Arduino UNO use `arduino-cli core install arduino:avr`.
+- Run the server with `npm run dev`.
+
+## Writing code to interface with the server
+
+These are examples of code snippets that can be used to interface with the server.
+
+### Arduino-cli Example
 
 ```js
 ArduinoCli.getInstance()
@@ -20,7 +33,7 @@ ArduinoCli.getInstance()
   .catch((e) => console.log(e));
 ```
 
-## Simple serial
+### Simple serial
 
 ```js
 SimpleSerial.getInstance().initialize({
@@ -43,6 +56,6 @@ setTimeout(() => {
 }, 10000);
 ```
 
-## Websockets
+### Websockets
 
 To see the ws protocol, refer to [this](./ws.md).
