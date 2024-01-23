@@ -1,7 +1,7 @@
 {
-  "name": "serial-server",
+  "name": "inline-server",
   "version": "1.0.0",
-  "description": "Server",
+  "description": "Inline Server",
   "main": "index.js",
   "scripts": {
     "start": "node dist/app.js",
@@ -26,6 +26,5 @@
     "serialport": "^9.2.8",
     "socket.io": "^4.4.0",
     "temp": "^0.9.4"
-  },
-  "keywords": []
+  }
 }
