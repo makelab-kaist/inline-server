@@ -4,7 +4,7 @@
   "description": "Inline Server",
   "main": "index.js",
   "scripts": {
-    "start": "node dist/app.js",
+    "start": "npm run build && node dist/app.js",
     "dev": "nodemon src/app.ts",
     "build": "tsc -p .",
     "build_docs": "npx ag --force-write ./asyncapi.yaml @asyncapi/html-template -o docs"
